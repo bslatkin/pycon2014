@@ -37,7 +37,7 @@ def wordcount(start_url, max_depth, word_length):
 
     fetch_queue.join()
     count_queue.join()
-    result_queue.put(done_object)  # Indicate all inputs are done
+    result_queue.put(done_object)  # Special signal for "done" :/
 
     return output_queue.get()
 
@@ -61,14 +61,14 @@ def counter(count_queue, word_length, result_queue):
 #         url, counts = result_queue.get()
 #         for word, count in counts.items():
 #             total_counts[word] = total_counts.get(word, 0) + count
-#         # ¿ How do you know how to stop waiting for the result_queue ?
+#         # How do you leave this loop? Output copy of results every time?
 
 
 def fan_in(result_queue, output_queue, done_object):
     total_counts = {}
     while True:
         found = result_queue.get()
-        if found is done_object: break  # Special stop signal
+        if found is done_object: break  # Receive stop signal :((
         url, counts = found
         for word, count in counts.items():
             total_counts[word] = total_counts.get(word, 0) + count
