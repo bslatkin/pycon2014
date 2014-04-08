@@ -10,13 +10,13 @@ from queue import Queue
 from sys import argv
 from threading import Thread
 
-from e01fetch import fetch
+from e01fetch import canonicalize, fetch
 from e02crawl import print_crawl
 
 
 def crawl_parallel(start_url, max_depth):
     fetch_queue = Queue()  # (crawl_depth, url)
-    fetch_queue.put((0, start_url))
+    fetch_queue.put((0, canonicalize(start_url)))
 
     seen_urls, result = set(), []
     func = lambda: consumer(fetch_queue, max_depth, seen_urls, result)
@@ -34,11 +34,11 @@ def consumer(fetch_queue, max_depth, seen_urls, result):
             if depth > max_depth: continue     # Ignore URLs that are too deep
             if url in seen_urls: continue      # Prevent infinite loops
 
-            url, data, found_urls = fetch(url)
-            seen_urls.add(url)                 # Relies on the GIL :/
+            seen_urls.add(url)                 # GIL :/
+            data, found_urls = fetch(url)
             if data is None: continue          # Ignore error URLs
 
-            result.append((depth, url, data))  # Relies on the GIL :(
+            result.append((depth, url, data))  # GIL :(
             for found in found_urls:
                 fetch_queue.put((depth + 1, found))
         finally:

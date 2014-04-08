@@ -16,12 +16,12 @@ import re
 from sys import argv
 from threading import Thread
 
-from e01fetch import fetch
+from e01fetch import canonicalize, fetch
 
 
 def wordcount(start_url, max_depth, word_length):
     fetch_queue = Queue()  # (crawl_depth, url)
-    fetch_queue.put((0, start_url))
+    fetch_queue.put((0, canonicalize(start_url)))
     count_queue = Queue()  # (url, data)
 
     seen_urls = set()
@@ -46,8 +46,8 @@ def fetcher(fetch_queue, max_depth, seen_urls, output_queue):
             if depth > max_depth: continue  # Ignore URLs that are too deep
             if url in seen_urls: continue   # Prevent infinite loops
 
-            seen_urls.add(url)              # Relies on the GIL :/
-            url, data, found_urls = fetch(url)
+            seen_urls.add(url)              # GIL :/
+            data, found_urls = fetch(url)
             if data is None: continue       # Ignore error URLs
 
             output_queue.put((url, data))
@@ -71,7 +71,7 @@ def counter(count_queue, word_length, result):
             if not ranked_words:
                 result[url] = ''
             else:
-                result[url] = ranked_words[0]  # Relies on the GIL :/
+                result[url] = ranked_words[0]  # GIL :(
         finally:
             count_queue.task_done()
 

@@ -46,8 +46,6 @@ def get_url(url):
 
 
 def fetch(url):
-    url = canonicalize(url)
-
     # Bridge the gap between sync and async
     future = asyncio.Task(get_url(url))
     loop = asyncio.get_event_loop()
@@ -56,17 +54,18 @@ def fetch(url):
     data = future.result()
 
     if data is None:
-        return None, None, []  # Error
+        return None, []  # Error
     found_urls = set()
     for match in URL_EXPR.finditer(data):
         found = canonicalize(match.group('url'))
         if same_domain(url, found):
             found_urls.add(urljoin(url, found))
-    return url, data, found_urls
+    return data, sorted(found_urls)
 
 
 def main():
-    url, data, found_urls = fetch(argv[1])
+    url = canonicalize(argv[1])
+    data, found_urls = fetch(url)
     print('%s is %d bytes, %d urls:\n%s' %
           (url, len(data), len(found_urls), '\n'.join(found_urls)))
 

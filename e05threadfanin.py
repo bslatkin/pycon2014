@@ -12,12 +12,12 @@ import re
 from sys import argv
 from threading import Thread
 
-from e04twostage import fetcher
+from e04twostage import canonicalize, fetcher
 
 
 def wordcount(start_url, max_depth, word_length):
     fetch_queue = Queue()  # (crawl_depth, url)
-    fetch_queue.put((0, start_url))
+    fetch_queue.put((0, canonicalize(start_url)))
     count_queue = Queue()  # (url, data)
 
     seen_urls = set()
@@ -61,7 +61,7 @@ def counter(count_queue, word_length, result_queue):
 #         url, counts = result_queue.get()
 #         for word, count in counts.items():
 #             total_counts[word] = total_counts.get(word, 0) + count
-#         # How do you leave this loop? Output copy of results every time?
+#         # XX How do you leave this loop? Output copy of results every time?
 
 
 def fan_in(result_queue, output_queue, done_object):

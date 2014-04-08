@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
 """
-./e01fetch.py http://camlistore.org
-http://camlistore.org/ is 3681 bytes, 11 urls:
+./e07asynccrawl.py http://camlistore.org 2
+Found 37 urls
+Depth  0  http://camlistore.org/                                   3681 bytes
+Depth  1  http://camlistore.org/code                               4237 bytes
+Depth  1  http://camlistore.org/community                          2180 bytes
 ...
 """
 
@@ -11,12 +14,12 @@ from urllib.parse import urljoin
 
 import asyncio
 from e01fetch import canonicalize, same_domain, URL_EXPR
+from e02crawl import print_crawl
 from e06asyncfetch import get_url
 
 
 @asyncio.coroutine
 def fetch(url):
-    url = canonicalize(url)
     data = yield from get_url(url)
     if data is None:
         return None, None, []  # Error
@@ -25,29 +28,31 @@ def fetch(url):
         found = canonicalize(match.group('url'))
         if same_domain(url, found):
             found_urls.add(urljoin(url, found))
-    return url, data, found_urls
+    return url, data, sorted(found_urls)
 
 
 @asyncio.coroutine
-def crawl(start_url, max_depth, _depth=0, _seen_urls=None):
-    if _seen_urls is None: _seen_urls = set()
-    if _depth > max_depth: return {}        # Reached max depth
-    if start_url in _seen_urls: return {}   # Prevent loops
+def crawl(start_url, max_depth):
+    seen_urls = set()
+    to_fetch = [(0, canonicalize(start_url))]
+    results = []
+    while to_fetch:
+        futures = []
+        for depth, url in to_fetch:
+            if depth > max_depth: continue
+            if url in seen_urls: continue
+            seen_urls.add(url)
+            futures.append(fetch(url))  # Parallel kickoff
 
-    _seen_urls.add(start_url)
-    start_url, data, found_urls = yield from fetch(start_url)
-    if data is None: return {}              # Ignore error URLs
+        to_fetch = []
+        for future in asyncio.as_completed(futures):
+            url, data, found_urls = yield from future
+            if data is not None:
+                results.append((depth, url, data))
+            for url in found_urls:
+                to_fetch.append((depth+1, url))
 
-    futures = []
-    for url in found_urls:
-        futures.append(crawl(
-            url, max_depth, _depth=_depth+1, _seen_urls=_seen_urls))
-
-    result = {start_url: (_depth, data)}
-    for future in asyncio.as_completed(futures):
-        result.update((yield from future))
-
-    return result
+    return results
 
 
 def main():
@@ -58,9 +63,7 @@ def main():
     loop.close()
 
     result = future.result()
-    print('Found %d urls' % len(result))
-    for url, (depth, data) in result.items():
-        print('%10d bytes, depth %2d: %s' % (len(data), depth, url))
+    print_crawl(result)
 
 
 if __name__ == '__main__':
