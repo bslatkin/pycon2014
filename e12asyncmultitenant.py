@@ -6,7 +6,7 @@
 Navigate your browser to http://localhost:9999
 """
 
-from cgi import escape
+from html import escape
 from sys import argv
 from urllib.parse import parse_qsl
 
