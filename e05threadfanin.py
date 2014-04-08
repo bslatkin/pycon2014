@@ -48,7 +48,7 @@ def counter(count_queue, word_length, result_queue):
         try:
             counts = {}
             for match in re.finditer('\w{%d,100}' % word_length, data):
-                word = match.group(0)
+                word = match.group(0).lower()
                 counts[word] = counts.get(word, 0) + 1
             result_queue.put((url, counts))
         finally:

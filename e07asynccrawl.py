@@ -10,7 +10,6 @@ Depth  1  http://camlistore.org/community                          2180 bytes
 """
 
 from sys import argv
-from urllib.parse import urljoin
 
 import asyncio
 from e01fetch import canonicalize
@@ -24,24 +23,17 @@ def crawl(start_url, max_depth):
     to_fetch = [(0, canonicalize(start_url))]
     results = []
     while to_fetch:
-        futures = []
-        for depth, url in to_fetch:
-            if depth > max_depth: continue
-            if url in seen_urls: continue
-            seen_urls.add(url)
-            futures.append(fetch_async(url))  # Parallel kickoff
-
-        to_fetch = []
-
-        for future in asyncio.as_completed(futures):  # Prioritized wait
-            try:
-                url, data, found_urls = yield from future
-            except Exception:
-                continue  # Ignore bad URLs
-
-            results.append((depth, url, data))
-            for url in found_urls:
-                to_fetch.append((depth+1, url))
+        depth, url = to_fetch.pop(0)
+        if depth > max_depth: continue
+        if url in seen_urls: continue
+        seen_urls.add(url)
+        try:
+            url, data, found_urls = yield from fetch_async(url)
+        except Exception:
+            continue
+        results.append((depth, url, data))
+        for url in found_urls:
+            to_fetch.append((depth+1, url))
 
     return results
 

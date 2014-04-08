@@ -8,7 +8,7 @@ http://camlistore.org/download most popular word : ('release', 10)
 ...
 
 
-First integer is depth, second is minimum word count.
+First integer arg is depth, second is minimum word count.
 """
 
 from queue import Queue
@@ -19,7 +19,7 @@ from threading import Thread
 from e01fetch import canonicalize, fetch
 
 
-def wordcount(start_url, max_depth, word_length):
+def parallel_wordcount(start_url, max_depth, word_length):
     fetch_queue = Queue()  # (crawl_depth, url)
     fetch_queue.put((0, canonicalize(start_url)))
     count_queue = Queue()  # (url, data)
@@ -65,7 +65,7 @@ def counter(count_queue, word_length, result):
         try:
             counts = {}
             for match in re.finditer('\w{%d,100}' % word_length, data):
-                word = match.group(0)
+                word = match.group(0).lower()
                 counts[word] = counts.get(word, 0) + 1
 
             ranked_words = list(counts.items())
@@ -85,7 +85,7 @@ def print_popular_word(result):
 
 
 def main():
-    result = wordcount(argv[1], int(argv[2]), int(argv[3]))
+    result = parallel_wordcount(argv[1], int(argv[2]), int(argv[3]))
     print_popular_word(result)
 
 

@@ -6,7 +6,6 @@ Found 37 urls
 Depth  0  http://camlistore.org/                                   3681 bytes
 Depth  1  http://camlistore.org/code                               4237 bytes
 Depth  1  http://camlistore.org/community                          2180 bytes
-Depth  1  http://camlistore.org/contributors                       2037 bytes
 ...
 """
 
@@ -23,13 +22,11 @@ def crawl(start_url, max_depth):
         depth, url = to_fetch.pop(0)
         if depth > max_depth: continue
         if url in seen_urls: continue
-
         seen_urls.add(url)
         try:
             data, found_urls = fetch(url)
         except Exception:
             continue
-
         results.append((depth, url, data))
         for url in found_urls:
             to_fetch.append((depth+1, url))
