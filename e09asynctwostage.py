@@ -51,7 +51,7 @@ def crawl(start_url, max_depth, word_length):
         futures = []
         for depth, url in to_fetch:
             if depth > max_depth: continue
-            if url in seen_urls: continue
+            if url in seen_urls: continue  # All one thread :)
             seen_urls.add(url)
             futures.append(fetch_and_wordcount(url, word_length))
 
@@ -63,7 +63,7 @@ def crawl(start_url, max_depth, word_length):
             except Exception:
                 continue
 
-            results[url] = top_word
+            results[url] = top_word  # All one thread :)
             for url in found_urls:
                 to_fetch.append((depth+1, url))
 

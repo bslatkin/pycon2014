@@ -2,7 +2,10 @@
 
 """
 ./e05threadfanin.py http://camlistore.org 1 5
-Most popular word is ('camlistore', 61)
+#0 word,  107 occurrences: camlistore
+#1 word,   45 occurrences: class
+...
+
 
 First integer is depth, second is minimum word count.
 """
@@ -55,15 +58,6 @@ def counter(count_queue, word_length, result_queue):
             count_queue.task_done()
 
 
-# def fan_in(result_queue, output):
-#     total_counts = {}
-#     while True:
-#         url, counts = result_queue.get()
-#         for word, count in counts.items():
-#             total_counts[word] = total_counts.get(word, 0) + count
-#         # XX How do you leave this loop? Output copy of results every time?
-
-
 def fan_in(result_queue, output_queue, done_object):
     total_counts = {}
     while True:
@@ -72,19 +66,21 @@ def fan_in(result_queue, output_queue, done_object):
         url, counts = found
         for word, count in counts.items():
             total_counts[word] = total_counts.get(word, 0) + count
+        # XX How else could you leave this loop? Output results every time?
 
-    ranked_words = list(total_counts.items())
+    output_queue.put(total_counts)
+
+
+def print_top_words(counts):
+    ranked_words = list(counts.items())
     ranked_words.sort(key=lambda x: x[1], reverse=True)
-    if not ranked_words:
-        result = ''
-    else:
-        result = ranked_words[0]
-    output_queue.put(result)
+    for rank, (word, count) in enumerate(ranked_words[:10]):
+        print('#%d word, %4d occurrences: %s' % (rank, count, word))
 
 
 def main():
-    result = wordcount(argv[1], int(argv[2]), int(argv[3]))
-    print('Most popular word is', result)
+    counts = wordcount(argv[1], int(argv[2]), int(argv[3]))
+    print_top_words(counts)
 
 
 if __name__ == '__main__':

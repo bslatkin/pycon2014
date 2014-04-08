@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
 """
-./e09asynctwostage.py http://camlistore.org 1 6
-Found 10 urls
-http://camlistore.org/docs/contributing most popular word : ('camlistore', 13)
-http://camlistore.org/contributors most popular word : ('script', 4)
+./e10asyncfanin.py http://camlistore.org 1 6
+#0 word,  107 occurrences: camlistore
+#1 word,   39 occurrences: content
 ...
 
 
@@ -16,7 +15,7 @@ from sys import argv
 
 import asyncio
 from e01fetch import canonicalize
-from e04twostage import print_popular_word
+from e05threadfanin import print_top_words
 from e06asyncfetch import fetch_async
 
 
@@ -59,18 +58,10 @@ def crawl(start_url, max_depth, word_length):
 
             for word, count in words_dict.items():
                 counts[word] = counts.get(word, 0) + count
-
             for url in found_urls:
                 to_fetch.append((depth+1, url))
 
     return counts
-
-
-def print_top_words(counts):
-    ranked_words = list(counts.items())
-    ranked_words.sort(key=lambda x: x[1], reverse=True)
-    for rank, (word, count) in enumerate(ranked_words[:10]):
-        print('#%d word, %4d occurrences: %s' % (rank, count, word))
 
 
 def main():
