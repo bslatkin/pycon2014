@@ -3,17 +3,7 @@
 """
 ./e01fetch.py http://camlistore.org
 http://camlistore.org/ is 3681 bytes, 11 urls:
-http://camlistore.org/
-http://camlistore.org/static/godocs.js
-http://camlistore.org/static/all.css
-http://camlistore.org/code
-http://camlistore.org/contributors
-http://camlistore.org/download
-http://camlistore.org/docs/
-http://camlistore.org/static/camli-header.jpg
-http://camlistore.org/community
-http://camlistore.org/static/all-async.js
-http://camlistore.org/docs/contributing
+...
 """
 
 import logging
