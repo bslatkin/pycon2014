@@ -35,8 +35,10 @@ def consumer(fetch_queue, max_depth, seen_urls, result):
             if url in seen_urls: continue      # Prevent infinite loops
 
             seen_urls.add(url)                 # GIL :/
-            data, found_urls = fetch(url)
-            if data is None: continue          # Ignore error URLs
+            try:
+                data, found_urls = fetch(url)
+            except Exception:
+                continue
 
             result.append((depth, url, data))  # GIL :(
             for found in found_urls:

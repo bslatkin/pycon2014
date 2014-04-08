@@ -23,10 +23,14 @@ def crawl(start_url, max_depth):
         depth, url = to_fetch.pop(0)
         if depth > max_depth: continue
         if url in seen_urls: continue
+
         seen_urls.add(url)
-        data, found_urls = fetch(url)
-        if data is not None:
-            results.append((depth, url, data))
+        try:
+            data, found_urls = fetch(url)
+        except Exception:
+            continue
+
+        results.append((depth, url, data))
         for url in found_urls:
             to_fetch.append((depth+1, url))
 

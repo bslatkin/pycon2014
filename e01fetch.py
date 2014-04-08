@@ -37,24 +37,11 @@ def canonicalize(url):
 
 def get_url(url):
     logging.info('Fetching %s', url)
-    try:
-        response = urlopen(url, timeout=5)
-    except Exception as e:
-        logging.error('Error fetching %s. %s: %s',
-                      url, e.__class__.__name__, e)
-        return None
-    if response.status != 200:
-        logging.error('Error fetching %s. HTTP Status: %d',
-                      url, response.status)
-        return None
+    response = urlopen(url, timeout=5)
+    assert response.status == 200
     data = response.read()
-    if not data:
-        logging.error('Error fetching %s. No data.', url)
-        return None
-    try:
-        return data.decode('utf-8')
-    except:
-        return None
+    assert data
+    return data.decode('utf-8')
 
 
 def same_domain(a, b):
@@ -69,8 +56,6 @@ def same_domain(a, b):
 
 def fetch(url):
     data = get_url(url)
-    if data is None:
-        return None, []  # Error
     found_urls = set()
     for match in URL_EXPR.finditer(data):
         found = canonicalize(match.group('url'))

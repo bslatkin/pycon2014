@@ -13,7 +13,7 @@ from sys import argv
 from urllib.parse import urljoin
 
 import asyncio
-from e01fetch import canonicalize, same_domain, URL_EXPR
+from e01fetch import canonicalize
 from e02crawl import print_crawl
 from e06asyncfetch import fetch_async
 
@@ -32,10 +32,11 @@ def crawl(start_url, max_depth):
             futures.append(fetch_async(url))  # Parallel kickoff
 
         to_fetch = []
+
         for future in asyncio.as_completed(futures):  # Prioritized wait
             try:
                 url, data, found_urls = yield from future
-            except Exception as e:
+            except Exception:
                 continue  # Ignore bad URLs
 
             results.append((depth, url, data))

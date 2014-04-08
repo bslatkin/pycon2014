@@ -47,8 +47,10 @@ def fetcher(fetch_queue, max_depth, seen_urls, output_queue):
             if url in seen_urls: continue   # Prevent infinite loops
 
             seen_urls.add(url)              # GIL :/
-            data, found_urls = fetch(url)
-            if data is None: continue       # Ignore error URLs
+            try:
+                data, found_urls = fetch(url)
+            except Exception:
+                continue
 
             output_queue.put((url, data))
             for found in found_urls:

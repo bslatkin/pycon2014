@@ -9,25 +9,13 @@ Depth  1  http://camlistore.org/community                          2180 bytes
 ...
 """
 
+import re
 from sys import argv
-from urllib.parse import urljoin
 
 import asyncio
-from e01fetch import canonicalize, same_domain, URL_EXPR
+from e01fetch import canonicalize
 from e04twostage import print_popular_word
-
-
-@asyncio.coroutine
-def fetch(url):
-    data = yield from get_url(url)
-    if data is None:
-        return None, None, []  # Error
-    found_urls = set()
-    for match in URL_EXPR.finditer(data):
-        found = canonicalize(match.group('url'))
-        if same_domain(url, found):
-            found_urls.add(urljoin(url, found))
-    return data, sorted(found_urls)
+from e06asyncfetch import fetch_async
 
 
 @asyncio.coroutine
@@ -37,69 +25,48 @@ def wordcount(data, word_length):
         word = match.group(0)
         counts[word] = counts.get(word, 0) + 1
 
+    if not counts:
+        return ''
+
     ranked_words = list(counts.items())
     ranked_words.sort(key=lambda x: x[1], reverse=True)
-    if not ranked_words:
-        top_word = ''
-    else:
-        top_word = ranked_words[0]
-
-    return top_word
+    return ranked_words[0]
 
 
 @asyncio.coroutine
 def fetch_and_wordcount(url, word_length):
-    data, found_urls = yield from fetch(url)
-    if data is None:
-        raise
-
+    _, data, found_urls = yield from fetch_async(url)
+    top_word = yield from wordcount(data, word_length)
+    return url, top_word, found_urls
 
 
 @asyncio.coroutine
-def crawl(start_url, max_depth):
+def crawl(start_url, max_depth, word_length):
     seen_urls = set()
     to_fetch = [(0, canonicalize(start_url))]
-    results = []
+    results = {}
     while to_fetch:
         futures = []
         for depth, url in to_fetch:
             if depth > max_depth: continue
             if url in seen_urls: continue
             seen_urls.add(url)
-            futures.append(fetch(url))  # Parallel kickoff
+            futures.append(fetch_and_wordcount(url, word_length))
 
         to_fetch = []
-        for future in asyncio.as_completed(futures):  # Prioritized wait
-            url, data, found_urls = yield from future
+
+        for future in asyncio.as_completed(futures):
+            try:
+                url, top_word, found_urls = yield from future
+            except Exception:
+                continue
+
+            results[url] = top_word
             for url in found_urls:
                 to_fetch.append((depth+1, url))
 
-        if data is not None:
-            results.append((depth, url, data))
-
     return results
 
-
-@asyncio.coroutine
-def crawl(start_url, max_depth, word_length, depth=0, seen_urls=None):
-    if depth > max_depth: return []
-    if seen_urls is None: seen_urls = set()
-    if url in seen_urls: return []
-    seen_urls.add(url)
-
-    futures = []
-    url, data, found_urls = yield from fetch(url)
-    if data is not None:
-        futures.append(wordcount(depth, url, data, word_length))
-
-    for found in found_urls:
-        futures.append(crawl(
-            found, max_depth, depth=depth+1, seen_urls=seen_urls))
-
-    for future in asyncio.as_completed(futures):
-        results.extend((yield from future))
-
-    return result
 
 
 def main():
