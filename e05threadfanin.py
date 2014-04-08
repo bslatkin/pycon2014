@@ -71,11 +71,17 @@ def fan_in(result_queue, output_queue, done_object):
     output_queue.put(total_counts)
 
 
-def print_top_words(counts):
+def get_top_words(counts):
     ranked_words = list(counts.items())
     ranked_words.sort(key=lambda x: x[1], reverse=True)
+    message = []
     for rank, (word, count) in enumerate(ranked_words[:10]):
-        print('#%d word, %4d occurrences: %s' % (rank, count, word))
+        message.append('#%d word, %4d occurrences: %s\n' % (rank, count, word))
+    return ''.join(message)
+
+
+def print_top_words(counts):
+    print(get_top_words(counts))
 
 
 def main():
