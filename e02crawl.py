@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 
 """
-./e02crawl.py http://camlistore.org 1
-Found 10 urls
+./e02crawl.py http://camlistore.org 2
+Found 37 urls
+Depth  0  http://camlistore.org/                                   3681 bytes
+Depth  1  http://camlistore.org/code                               4237 bytes
+Depth  1  http://camlistore.org/community                          2180 bytes
+Depth  1  http://camlistore.org/contributors                       2037 bytes
 ...
 """
 
@@ -11,27 +15,34 @@ from sys import argv
 from e01fetch import fetch
 
 
-def crawl(start_url, max_depth, _depth=0, _seen_urls=None):
-    if _seen_urls is None: _seen_urls = set()
-    if _depth > max_depth: return {}        # Reached max depth
-    if start_url in _seen_urls: return {}   # Prevent loops
+def crawl(start_url, max_depth):
+    seen_urls = set()
+    to_fetch = [(0, start_url)]
+    results = []
+    while to_fetch:
+        depth, url = to_fetch.pop(0)
+        if depth > max_depth: continue
+        if url in seen_urls: continue
+        url, data, found_urls = fetch(url)
+        seen_urls.add(url)  # Canonicalized
+        if data is not None:
+            results.append((depth, url, data))
+        for url in found_urls:
+            to_fetch.append((depth+1, url))
 
-    _seen_urls.add(start_url)
-    start_url, data, found_urls = fetch(start_url)
-    if data is None: return {}              # Ignore error URLs
+    return results
 
-    result = {start_url: data}
-    for url in found_urls:
-        result.update(crawl(
-            url, max_depth, _depth=_depth+1, _seen_urls=_seen_urls))
-    return result
+
+def print_crawl(result):
+    result.sort()
+    print('Found %d urls' % len(result))
+    for depth, url, data in result:
+        print('Depth %2d  %-50s %10d bytes' % (depth, url, len(data)))
 
 
 def main():
     result = crawl(argv[1], int(argv[2]))
-    print('Found %d urls' % len(result))
-    for url, data in result.items():
-        print('%10d bytes: %s' % (len(data), url))
+    print_crawl(result)
 
 
 if __name__ == '__main__':

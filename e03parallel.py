@@ -11,13 +11,14 @@ from sys import argv
 from threading import Thread
 
 from e01fetch import fetch
+from e02crawl import print_crawl
 
 
 def crawl_parallel(start_url, max_depth):
     fetch_queue = Queue()  # (crawl_depth, url)
     fetch_queue.put((0, start_url))
 
-    seen_urls, result = set(), {}
+    seen_urls, result = set(), []
     func = lambda: consumer(fetch_queue, max_depth, seen_urls, result)
     for _ in range(3):
         Thread(target=func, daemon=True).start()
@@ -30,14 +31,14 @@ def consumer(fetch_queue, max_depth, seen_urls, result):
     while True:
         depth, url = fetch_queue.get()
         try:
-            if depth > max_depth: continue  # Ignore URLs that are too deep
-            if url in seen_urls: continue   # Prevent infinite loops
+            if depth > max_depth: continue     # Ignore URLs that are too deep
+            if url in seen_urls: continue      # Prevent infinite loops
 
-            seen_urls.add(url)              # Relies on the GIL :/
             url, data, found_urls = fetch(url)
-            if data is None: continue       # Ignore error URLs
+            seen_urls.add(url)                 # Relies on the GIL :/
+            if data is None: continue          # Ignore error URLs
 
-            result[url] = data              # Relies on the GIL :(
+            result.append((depth, url, data))  # Relies on the GIL :(
             for found in found_urls:
                 fetch_queue.put((depth + 1, found))
         finally:
@@ -46,9 +47,7 @@ def consumer(fetch_queue, max_depth, seen_urls, result):
 
 def main():
     result = crawl_parallel(argv[1], int(argv[2]))
-    print('Found %d urls' % len(result))
-    for url, data in result.items():
-        print('%10d bytes: %s' % (len(data), url))
+    print_crawl(result)
 
 
 if __name__ == '__main__':

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 
 """
-./e01fetch.py http://camlistore.org
+./e06asyncfetch.py http://camlistore.org
 http://camlistore.org/ is 3681 bytes, 11 urls:
 ...
 """
 
 import logging
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 import re
 from sys import argv
 from urllib.parse import urljoin
@@ -21,7 +21,7 @@ from e01fetch import canonicalize, same_domain, URL_EXPR
 
 @asyncio.coroutine
 def get_url(url):
-    logging.debug('Fetching %s', url)
+    logging.info('Fetching %s', url)
     try:
         response = yield from aiohttp.request('get', url, timeout=5)
     except Exception as e:
@@ -51,7 +51,7 @@ def fetch(url):
     # Bridge the gap between sync and async
     future = asyncio.Task(get_url(url))
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(asyncio.wait_for(future, timeout=None))
+    loop.run_until_complete(future)
     loop.close()
     data = future.result()
 

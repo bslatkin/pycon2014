@@ -2,12 +2,14 @@
 
 """
 ./e01fetch.py http://camlistore.org
+INFO:root:Fetching http://camlistore.org/
 http://camlistore.org/ is 3681 bytes, 11 urls:
+http://camlistore.org/
 ...
 """
 
 import logging
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 import re
 from sys import argv
 from urllib.request import urlopen
@@ -34,7 +36,7 @@ def canonicalize(url):
 
 
 def get_url(url):
-    logging.debug('Fetching %s', url)
+    logging.info('Fetching %s', url)
     try:
         response = urlopen(url, timeout=5)
     except Exception as e:
@@ -75,7 +77,7 @@ def fetch(url):
         found = canonicalize(match.group('url'))
         if same_domain(url, found):
             found_urls.add(urljoin(url, found))
-    return url, data, found_urls
+    return url, data, sorted(found_urls)
 
 
 def main():
