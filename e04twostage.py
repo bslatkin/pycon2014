@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 
 """
-./e03parallel.py http://camlistore.org 2
-Found 37 urls
+./e04twostage.py http://camlistore.org 1 6
+Found 10 urls
+http://camlistore.org/ most popular word : ('Camlistore', 9)
+http://camlistore.org/download most popular word : ('release', 10)
 ...
+
+
+First integer is depth, second is minimum word count.
 """
 
 from queue import Queue
