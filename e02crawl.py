@@ -23,7 +23,7 @@ def crawl(start_url, max_depth):
         depth, url = to_fetch.pop(0)
         if depth > max_depth: continue
         if url in seen_urls: continue
-        seen_urls.add(url)  # Canonicalized
+        seen_urls.add(url)
         data, found_urls = fetch(url)
         if data is not None:
             results.append((depth, url, data))

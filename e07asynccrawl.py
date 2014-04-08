@@ -15,20 +15,7 @@ from urllib.parse import urljoin
 import asyncio
 from e01fetch import canonicalize, same_domain, URL_EXPR
 from e02crawl import print_crawl
-from e06asyncfetch import get_url
-
-
-@asyncio.coroutine
-def fetch(url):
-    data = yield from get_url(url)
-    if data is None:
-        return None, None, []  # Error
-    found_urls = set()
-    for match in URL_EXPR.finditer(data):
-        found = canonicalize(match.group('url'))
-        if same_domain(url, found):
-            found_urls.add(urljoin(url, found))
-    return url, data, sorted(found_urls)
+from e06asyncfetch import fetch_async
 
 
 @asyncio.coroutine
@@ -42,13 +29,16 @@ def crawl(start_url, max_depth):
             if depth > max_depth: continue
             if url in seen_urls: continue
             seen_urls.add(url)
-            futures.append(fetch(url))  # Parallel kickoff
+            futures.append(fetch_async(url))  # Parallel kickoff
 
         to_fetch = []
-        for future in asyncio.as_completed(futures):
-            url, data, found_urls = yield from future
-            if data is not None:
-                results.append((depth, url, data))
+        for future in asyncio.as_completed(futures):  # Prioritized wait
+            try:
+                url, data, found_urls = yield from future
+            except Exception as e:
+                continue  # Ignore bad URLs
+
+            results.append((depth, url, data))
             for url in found_urls:
                 to_fetch.append((depth+1, url))
 

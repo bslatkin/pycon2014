@@ -76,11 +76,15 @@ def counter(count_queue, word_length, result):
             count_queue.task_done()
 
 
-def main():
-    result = wordcount(argv[1], int(argv[2]), int(argv[3]))
+def print_popular_word(result):
     print('Found %d urls' % len(result))
     for url, popular_word in result.items():
         print('%s most popular word : %s' % (url, popular_word))
+
+
+def main():
+    result = wordcount(argv[1], int(argv[2]), int(argv[3]))
+    print_popular_word(result)
 
 
 if __name__ == '__main__':

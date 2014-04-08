@@ -4,6 +4,10 @@
 ./e06asyncfetch.py http://camlistore.org
 http://camlistore.org/ is 3681 bytes, 11 urls:
 ...
+
+Also try the error case and check out the legible traceback:
+./e06asyncfetch.py http://camlistore.bad
+...
 """
 
 import logging
@@ -20,52 +24,39 @@ from e01fetch import canonicalize, same_domain, URL_EXPR
 
 
 @asyncio.coroutine
-def get_url(url):
+def get_url_async(url):
     logging.info('Fetching %s', url)
+    response = yield from aiohttp.request('get', url, timeout=5)
     try:
-        response = yield from aiohttp.request('get', url, timeout=5)
-    except Exception as e:
-        logging.error('Error fetching %s. %s: %s',
-                      url, e.__class__.__name__, e)
-        return None
-    try:
-        if response.status != 200:
-            logging.error('Error fetching %s. HTTP Status: %d',
-                          url, response.status)
-            return None
+        assert response.status == 200
         data = yield from response.read()
-        if not data:
-            logging.error('Error fetching %s. No data.', url)
-            return None
-        try:
-            return data.decode('utf-8')
-        except:
-            return None
+        assert data
+        return data.decode('utf-8')
     finally:
         response.close()
 
 
-def fetch(url):
-    # Bridge the gap between sync and async
-    future = asyncio.Task(get_url(url))
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(future)
-    loop.close()
-    data = future.result()
-
-    if data is None:
-        return None, []  # Error
+@asyncio.coroutine
+def fetch_async(url):
+    data = yield from get_url_async(url)
     found_urls = set()
     for match in URL_EXPR.finditer(data):
         found = canonicalize(match.group('url'))
         if same_domain(url, found):
             found_urls.add(urljoin(url, found))
-    return data, sorted(found_urls)
+    return url, data, sorted(found_urls)
 
 
 def main():
     url = canonicalize(argv[1])
-    data, found_urls = fetch(url)
+
+    # Bridge the gap between sync and async
+    future = asyncio.Task(fetch_async(url))
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(future)
+    loop.close()
+
+    _, data, found_urls = future.result()  # Will raise exception
     print('%s is %d bytes, %d urls:\n%s' %
           (url, len(data), len(found_urls), '\n'.join(found_urls)))
 
