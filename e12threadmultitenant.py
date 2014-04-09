@@ -1,13 +1,9 @@
 #!/usr/bin/env python3
 
 """
-./e12threadmultitenant.py http://camlistore.org 1 6
-#0 word,  107 occurrences: camlistore
-#1 word,   45 occurrences: class
-...
+./e12threadmultitenant.py 9999
 
-
-First integer is depth, second is minimum word count.
+Navigate your browser to http://localhost:9999
 """
 
 from html import escape
