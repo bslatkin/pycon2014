@@ -10,15 +10,20 @@
 First integer is depth, second is minimum word count.
 """
 
+from html import escape
+from http.server import BaseHTTPRequestHandler, HTTPServer
 import logging
 logging.getLogger().setLevel(logging.INFO)
 from queue import Queue
 import re
+from socketserver import ThreadingMixIn
 from sys import argv
 from threading import Condition, Thread
+from urllib.parse import parse_qsl
 
 from e01fetch import fetch
-from e05threadfanin import print_top_words
+from e05threadfanin import get_top_words
+from e11asyncmultitenant import MY_FORM
 
 
 class State(object):
@@ -29,29 +34,6 @@ class State(object):
         self.pending_counts = 0
         self.totals = {}
         self.output = Condition()
-
-
-def wordcount(start_url, max_depth, word_length):
-    request_queue = Queue()
-    fetch_queue = Queue()
-    count_queue = Queue()
-
-    func = lambda: fetcher(fetch_queue, request_queue)
-    for _ in range(3):
-        Thread(target=func, daemon=True).start()
-
-    func = lambda: counter(count_queue, word_length, request_queue)
-    for _ in range(3):
-        Thread(target=func, daemon=True).start()
-
-    Coordinator(request_queue, fetch_queue, count_queue, max_depth,
-                daemon=True).start()
-
-    state = State(start_url)
-    request_queue.put(state)
-    with state.output:
-        state.output.wait()
-    return state.totals
 
 
 class FetchResult(object):
@@ -172,9 +154,56 @@ class Coordinator(Thread):
                 self.request_queue.task_done()
 
 
+def start(max_depth, word_length):
+    request_queue = Queue()
+    fetch_queue = Queue()
+    count_queue = Queue()
+
+    func = lambda: fetcher(fetch_queue, request_queue)
+    for _ in range(3):
+        Thread(target=func, daemon=True).start()
+
+    func = lambda: counter(count_queue, word_length, request_queue)
+    for _ in range(3):
+        Thread(target=func, daemon=True).start()
+
+    Coordinator(request_queue, fetch_queue, count_queue, max_depth,
+                daemon=True).start()
+
+    return request_queue
+
+
+class MyHandler(BaseHTTPRequestHandler):
+    request_queue = None
+
+    def do_GET(self):
+        self.wfile.write(MY_FORM.encode('utf-8'))
+
+    def do_POST(self):
+        length = min(100, int(self.headers.get('content-length', 0)))
+        data = self.rfile.read(length).decode('utf-8')
+        url = dict(parse_qsl(data)).get('url')
+        state = State(url)
+        self.request_queue.put(state)
+        with state.output:
+            state.output.wait()
+        self.wfile.write(b'<pre>')
+        self.wfile.write(escape(get_top_words(state.totals)).encode('utf-8'))
+        self.wfile.write(b'</pre>')
+
+
+
+class MyServer(HTTPServer, ThreadingMixIn):
+    daemon_threads = True
+    def __init__(self, port):
+        HTTPServer.__init__(self, ('', port), MyHandler)
+
+
 def main():
-    counts = wordcount(argv[1], int(argv[2]), int(argv[3]))
-    print_top_words(counts)
+    port = int(argv[1])
+    MyHandler.request_queue = start(1, 6)
+    server = MyServer(port)
+    server.serve_forever()
 
 
 if __name__ == '__main__':
