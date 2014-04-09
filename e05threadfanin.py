@@ -66,7 +66,6 @@ def fan_in(result_queue, output_queue, done_object):
         url, counts = found
         for word, count in counts.items():
             total_counts[word] = total_counts.get(word, 0) + count
-        # XX How else could you leave this loop? Output results every time?
 
     output_queue.put(total_counts)
 
