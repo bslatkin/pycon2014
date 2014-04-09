@@ -16,20 +16,19 @@ from e01fetch import canonicalize, fetch
 
 def crawl(start_url, max_depth):
     seen_urls = set()
-    to_fetch = [(0, canonicalize(start_url))]
+    to_fetch = [canonicalize(start_url)]
     results = []
-    while to_fetch:
-        depth, url = to_fetch.pop(0)
-        if depth > max_depth: continue
-        if url in seen_urls: continue
-        seen_urls.add(url)
-        try:
-            data, found_urls = fetch(url)
-        except Exception:
-            continue
-        results.append((depth, url, data))
-        for url in found_urls:
-            to_fetch.append((depth+1, url))
+    for depth in range(max_depth + 1):
+        batch, to_fetch = to_fetch, []
+        for url in batch:
+            if url in seen_urls: continue
+            seen_urls.add(url)
+            try:
+                data, found_urls = fetch(url)
+            except Exception:
+                continue
+            results.append((depth, url, data))
+            to_fetch.extend(found_urls)
 
     return results
 

@@ -18,28 +18,30 @@ from e06asyncfetch import fetch_async
 
 
 @asyncio.coroutine
+def parallel_fetch(to_fetch, seen_urls):
+    futures = []
+    for url in to_fetch:
+        if url in seen_urls: continue
+        seen_urls.add(url)
+        futures.append(fetch_async(url))  # Parallel kickoff
+    return futures
+
+
+@asyncio.coroutine
 def crawl(start_url, max_depth):
     seen_urls = set()
-    to_fetch = [(0, canonicalize(start_url))]
+    to_fetch = [canonicalize(start_url)]
     results = []
-    while to_fetch:
-        futures = []
-        for depth, url in to_fetch:
-            if depth > max_depth: continue
-            if url in seen_urls: continue
-            seen_urls.add(url)
-            futures.append(fetch_async(url))  # Parallel kickoff
-
+    for depth in range(max_depth + 1):
+        futures = yield from parallel_fetch(to_fetch, seen_urls)
         to_fetch = []
-
         for future in asyncio.as_completed(futures):  # Prioritized wait
             try:
                 url, data, found_urls = yield from future
             except Exception:
                 continue
+            to_fetch.extend(found_urls)
             results.append((depth, url, data))
-            for url in found_urls:
-                to_fetch.append((depth+1, url))
 
     return results
 
