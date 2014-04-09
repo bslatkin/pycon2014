@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+
+"""
+./e12threadmultitenant.py http://camlistore.org 1 6
+#0 word,  107 occurrences: camlistore
+#1 word,   45 occurrences: class
+...
+
+
+First integer is depth, second is minimum word count.
+"""
+
+import logging
+logging.getLogger().setLevel(logging.INFO)
+from queue import Queue
+import re
+from sys import argv
+from threading import Condition, Thread
+
+from e01fetch import fetch
+from e05threadfanin import print_top_words
+
+
+class State(object):
+    def __init__(self, start_url):
+        self.start_url = start_url
+        self.seen_urls = set()
+        self.pending_fetches = 0
+        self.pending_counts = 0
+        self.totals = {}
+        self.output = Condition()
+
+
+def wordcount(start_url, max_depth, word_length):
+    request_queue = Queue()
+    fetch_queue = Queue()
+    count_queue = Queue()
+
+    func = lambda: fetcher(fetch_queue, request_queue)
+    for _ in range(3):
+        Thread(target=func, daemon=True).start()
+
+    func = lambda: counter(count_queue, word_length, request_queue)
+    for _ in range(3):
+        Thread(target=func, daemon=True).start()
+
+    Coordinator(request_queue, fetch_queue, count_queue, max_depth,
+                daemon=True).start()
+
+    state = State(start_url)
+    request_queue.put(state)
+    with state.output:
+        state.output.wait()
+    return state.totals
+
+
+class FetchResult(object):
+    def __init__(self, state, depth, url, data, found_urls):
+        self.state = state
+        self.depth = depth
+        self.url = url
+        self.data = data
+        self.found_urls = found_urls
+
+
+def fetcher(fetch_queue, output_queue):
+    logging.info('Starting fetcher thread')
+    while True:
+        state, depth, url = fetch_queue.get()
+        logging.info('%s: Fetching in thread: %s', id(state), url)
+        try:
+            try:
+                data, found_urls = fetch(url)
+            except Exception:
+                data, found_urls = None, []
+
+            output_queue.put(FetchResult(state, depth, url, data, found_urls))
+        finally:
+            fetch_queue.task_done()
+
+
+class CountResult(object):
+    def __init__(self, state, url, counts):
+        self.state = state
+        self.url = url
+        self.counts = counts
+
+
+def counter(count_queue, word_length, result_queue):
+    logging.info('Starting counter thread')
+    while True:
+        state, url, data = count_queue.get()
+        logging.info('%s: Counting in thread: %s', id(state), url)
+        try:
+            counts = {}
+            for match in re.finditer('\w{%d,100}' % word_length, data):
+                word = match.group(0).lower()
+                counts[word] = counts.get(word, 0) + 1
+            result_queue.put(CountResult(state, url, counts))
+        finally:
+            count_queue.task_done()
+
+
+class Coordinator(Thread):
+    def __init__(self, request_queue, fetch_queue, count_queue, max_depth,
+                 **kwargs):
+        Thread.__init__(self, **kwargs)
+        self.request_queue = request_queue
+        self.fetch_queue = fetch_queue
+        self.count_queue = count_queue
+        self.max_depth = max_depth
+
+    def handle_state(self, state):
+        logging.info('%s: Handling kickoff for %s', id(state), state.start_url)
+        state.pending_fetches += 1
+        self.fetch_queue.put((state, 0, state.start_url))
+
+    def handle_fetch_result(self, fetch_result):
+        logging.info('%s: Handling fetch result for %s',
+                     id(fetch_result.state), fetch_result.url)
+        state = fetch_result.state
+        state.pending_fetches -= 1
+
+        state.seen_urls.add(fetch_result.url)
+        if fetch_result.data is not None:
+            state.pending_counts += 1
+            self.count_queue.put((state, fetch_result.url, fetch_result.data))
+
+        next_depth = fetch_result.depth + 1
+        if next_depth <= self.max_depth:
+            for url in fetch_result.found_urls:
+                if url in state.seen_urls: continue
+                state.seen_urls.add(url)
+                state.pending_fetches += 1
+                self.fetch_queue.put((state, next_depth, url))
+
+        self.maybe_notify(state)
+
+    def handle_count_result(self, count_result):
+        logging.info('%s: Handling count result for %s',
+                     id(count_result.state), count_result.url)
+        state = count_result.state
+        state.pending_counts -= 1
+
+        for word, count in count_result.counts.items():
+            state.totals[word] = state.totals.get(word, 0) + count
+
+        self.maybe_notify(state)
+
+    def maybe_notify(self, state):
+        logging.info('%s: Pending fetches: %d, pending counts: %d',
+                     id(state), state.pending_fetches, state.pending_counts)
+        if (state.pending_fetches == 0 and
+            state.pending_counts == 0):
+            with state.output:
+                state.output.notify()
+
+    def run(self):
+        logging.info('Coordinator started')
+        while True:
+            next = self.request_queue.get()
+            try:
+                if isinstance(next, State):
+                    self.handle_state(next)
+                elif isinstance(next, FetchResult):
+                    self.handle_fetch_result(next)
+                elif isinstance(next, CountResult):
+                    self.handle_count_result(next)
+                else:
+                    assert False
+            finally:
+                self.request_queue.task_done()
+
+
+def main():
+    counts = wordcount(argv[1], int(argv[2]), int(argv[3]))
+    print_top_words(counts)
+
+
+if __name__ == '__main__':
+    main()
