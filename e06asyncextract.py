@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
 """
-./e06asyncfetch.py http://camlistore.org
+./e06asyncextract.py http://camlistore.org
 http://camlistore.org/ is 3681 bytes, 11 urls:
 ...
 
 Also try the error case and check out the legible traceback:
-./e06asyncfetch.py http://camlistore.bad
+./e06asyncextract.py http://camlistore.bad
 ...
 """
 
@@ -24,7 +24,7 @@ from e01extract import canonicalize, same_domain, URL_EXPR
 
 
 @asyncio.coroutine
-def get_url_async(url):
+def fetch_async(url):
     logging.info('Fetching %s', url)
     response = yield from aiohttp.request('get', url, timeout=5)
     try:
@@ -37,8 +37,8 @@ def get_url_async(url):
 
 
 @asyncio.coroutine
-def fetch_async(url):
-    data = yield from get_url_async(url)
+def extract_async(url):
+    data = yield from fetch_async(url)
     found_urls = set()
     for match in URL_EXPR.finditer(data):
         found = canonicalize(match.group('url'))
@@ -51,7 +51,7 @@ def main():
     url = canonicalize(argv[1])
 
     # Bridge the gap between sync and async
-    future = asyncio.Task(fetch_async(url))
+    future = asyncio.Task(extract_async(url))
     loop = asyncio.get_event_loop()
     loop.run_until_complete(future)
     loop.close()

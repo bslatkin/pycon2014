@@ -16,7 +16,7 @@ from sys import argv
 import asyncio
 from e01extract import canonicalize
 from e05threadfanin import print_top_words
-from e06asyncfetch import fetch_async
+from e06asyncextract import fetch_async
 
 
 @asyncio.coroutine

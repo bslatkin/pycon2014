@@ -14,33 +14,40 @@ from sys import argv
 import asyncio
 from e01extract import canonicalize
 from e02crawl import print_crawl
-from e06asyncfetch import fetch_async
+from e06asyncextract import extract_async
 
 
 @asyncio.coroutine
-def crawl(start_url, max_depth):
+def extract_multi_async(to_fetch, seen_urls):
+    results = []
+    for url in to_fetch:
+        if url in seen_urls: continue
+        seen_urls.add(url)
+        try:
+            results.append((yield from extract_async(url)))
+        except Exception:
+            continue
+    return results
+
+
+@asyncio.coroutine
+def crawl_async(start_url, max_depth):
     seen_urls = set()
     to_fetch = [canonicalize(start_url)]
     results = []
     for depth in range(max_depth + 1):
-        batch, to_fetch = to_fetch, []
-        for url in batch:
-            if url in seen_urls: continue
-            seen_urls.add(url)
-            try:
-                url, data, found_urls = yield from fetch_async(url)
-            except Exception:
-                continue
+        batch = yield from extract_multi_async(to_fetch, seen_urls)
+        to_fetch = []
+        for url, data, found_urls in batch:
             results.append((depth, url, data))
             to_fetch.extend(found_urls)
 
     return results
 
 
-
 def main():
     # Bridge the gap between sync and async
-    future = asyncio.Task(crawl(argv[1], int(argv[2])))
+    future = asyncio.Task(crawl_async(argv[1], int(argv[2])))
     loop = asyncio.get_event_loop()
     loop.run_until_complete(future)
     loop.close()
