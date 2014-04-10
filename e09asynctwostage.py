@@ -16,7 +16,7 @@ from sys import argv
 
 import asyncio
 from e01extract import canonicalize
-from e04twostage import print_popular_word
+from e04twostage import print_popular_words
 from e06asyncextract import extract_async
 
 
@@ -26,13 +26,7 @@ def wordcount_async(data, word_length):
     for match in re.finditer('\w{%d,100}' % word_length, data):
         word = match.group(0).lower()
         counts[word] = counts.get(word, 0) + 1
-
-    if not counts:
-        return ''
-
-    ranked_words = list(counts.items())
-    ranked_words.sort(key=lambda x: x[1], reverse=True)
-    return ranked_words[0]
+    return counts
 
 
 @asyncio.coroutine
@@ -82,7 +76,7 @@ def main():
     loop.close()
 
     result = future.result()
-    print_popular_word(result)
+    print_popular_words(result)
 
 
 if __name__ == '__main__':
