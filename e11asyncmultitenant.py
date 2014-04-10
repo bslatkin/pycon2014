@@ -13,8 +13,8 @@ from urllib.parse import parse_qsl
 from aiohttp import Response
 from aiohttp.server import ServerHttpProtocol
 import asyncio
-from e05threadfanin import get_top_words
-from e10asyncfanin import crawl
+from e05threadfanin import get_global_words, get_top_words_message
+from e09asynctwostage import crawl_async
 
 
 MY_FORM = """
@@ -40,9 +40,11 @@ class MyServer(ServerHttpProtocol):
             data = yield from payload.read()
             data = data.decode('utf-8')
             url = dict(parse_qsl(data)).get('url')
-            result = yield from crawl(url, 1, 6)
+            result = yield from crawl_async(url, 1, 1)
             response.write(b'<pre>')
-            response.write(escape(get_top_words(result)).encode('utf-8'))
+            top_words = get_global_words(result)
+            message = get_top_words_message(top_words)
+            response.write(escape(message).encode('utf-8'))
             response.write(b'</pre>')
         else:
             response.write('Bad method')
