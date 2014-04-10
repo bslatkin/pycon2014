@@ -10,58 +10,16 @@
 First integer arg is depth, second is minimum word count.
 """
 
-import re
 from sys import argv
 
 import asyncio
-from e01extract import canonicalize
-from e05threadfanin import print_top_words
-from e06asyncextract import fetch_async
+from e06asynctwostage import crawl_async
 
 
 @asyncio.coroutine
-def wordcount(data, word_length):
-    counts = {}
-    for match in re.finditer('\w{%d,100}' % word_length, data):
-        word = match.group(0).lower()
-        counts[word] = counts.get(word, 0) + 1
-    return counts
+def wordcount_global_async(start_url, max_depth, word_length):
+    result = yield from crawl_async(start_url, max_depth, word_length)
 
-
-@asyncio.coroutine
-def fetch_and_wordcount(url, word_length):
-    _, data, found_urls = yield from fetch_async(url)
-    counts = yield from wordcount(data, word_length)
-    return url, counts, found_urls
-
-
-@asyncio.coroutine
-def crawl(start_url, max_depth, word_length):
-    seen_urls = set()
-    to_fetch = [(0, canonicalize(start_url))]
-    counts = {}
-    while to_fetch:
-        futures = []
-        for depth, url in to_fetch:
-            if depth > max_depth: continue
-            if url in seen_urls: continue
-            seen_urls.add(url)
-            futures.append(fetch_and_wordcount(url, word_length))
-
-        to_fetch = []
-
-        for future in asyncio.as_completed(futures):
-            try:
-                url, words_dict, found_urls = yield from future
-            except Exception:
-                continue
-
-            for word, count in words_dict.items():
-                counts[word] = counts.get(word, 0) + count
-            for url in found_urls:
-                to_fetch.append((depth+1, url))
-
-    return counts
 
 
 def main():

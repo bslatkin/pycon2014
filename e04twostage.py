@@ -68,25 +68,25 @@ def counter(count_queue, word_length, result):
                 word = match.group(0).lower()
                 counts[word] = counts.get(word, 0) + 1
 
-            ranked_words = list(counts.items())
-            ranked_words.sort(key=lambda x: x[1], reverse=True)
-            if not ranked_words:
-                result.append((url, ''))
-            else:
-                result.append((url, ranked_words[0]))  # GIL :(
+            result.append((url, counts))  # GIL :(
         finally:
             count_queue.task_done()
 
 
-def print_popular_word(result):
+def get_popular_words(counts):
+    ranked = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+    return ranked[:10]
+
+
+def print_popular_words(result):
     print('Found %d urls' % len(result))
-    for url, popular_word in result:
-        print('%s most popular word : %s' % (url, popular_word))
+    for url, counts in result:
+        print('%s frequencies: %s' % (url, get_popular_words(counts)))
 
 
 def main():
     result = parallel_wordcount(argv[1], int(argv[2]), int(argv[3]))
-    print_popular_word(result)
+    print_popular_words(result)
 
 
 if __name__ == '__main__':

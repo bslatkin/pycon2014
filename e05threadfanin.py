@@ -15,7 +15,7 @@ import re
 from sys import argv
 from threading import Thread
 
-from e04twostage import canonicalize, fetcher
+from e04twostage import canonicalize, fetcher, get_popular_words
 
 
 def wordcount(start_url, max_depth, word_length):
@@ -53,39 +53,46 @@ def counter(count_queue, word_length, result_queue):
             for match in re.finditer('\w{%d,100}' % word_length, data):
                 word = match.group(0).lower()
                 counts[word] = counts.get(word, 0) + 1
+
             result_queue.put((url, counts))
         finally:
             count_queue.task_done()
 
 
 def fan_in(result_queue, output_queue, done_object):
-    total_counts = {}
+    results = []
     while True:
         found = result_queue.get()
         if found is done_object: break  # Receive stop signal :((
-        url, counts = found
+        results.append(found)
+
+    output_queue.put(results)
+
+
+def get_global_words(result):
+    totals = {}
+    for url, counts in result:
         for word, count in counts.items():
-            total_counts[word] = total_counts.get(word, 0) + count
+            totals[word] = totals.get(word, 0) + count
+    return get_popular_words(totals)
 
-    output_queue.put(total_counts)
 
-
-def get_top_words(counts):
-    ranked_words = list(counts.items())
-    ranked_words.sort(key=lambda x: x[1], reverse=True)
+def get_top_words_message(words):
     message = []
-    for rank, (word, count) in enumerate(ranked_words[:10]):
-        message.append('#%d word, %4d occurrences: %s\n' % (rank, count, word))
-    return ''.join(message)
+    for rank, (word, count) in enumerate(words):
+        message.append('#%d word, %4d occurrences: %s' %
+                       (rank + 1, count, word))
+    return '\n'.join(message)
 
 
-def print_top_words(counts):
-    print(get_top_words(counts))
+def print_top_words(result):
+    words = get_global_words(result)
+    print(get_top_words_message(words))
 
 
 def main():
-    counts = wordcount(argv[1], int(argv[2]), int(argv[3]))
-    print_top_words(counts)
+    result = wordcount(argv[1], int(argv[2]), int(argv[3]))
+    print_top_words(result)
 
 
 if __name__ == '__main__':
