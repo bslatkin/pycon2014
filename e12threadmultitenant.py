@@ -17,8 +17,8 @@ from sys import argv
 from threading import Condition, Thread
 from urllib.parse import parse_qsl
 
-from e01extract import fetch
-from e05threadfanin import get_top_words
+from e01extract import extract
+from e05threadfanin import get_global_words, get_top_words_message
 from e11asyncmultitenant import MY_FORM
 
 
@@ -28,7 +28,7 @@ class State(object):
         self.seen_urls = set()
         self.pending_fetches = 0
         self.pending_counts = 0
-        self.totals = {}
+        self.results = []
         self.output = Condition()
 
 
@@ -48,7 +48,7 @@ def fetcher(fetch_queue, output_queue):
         logging.info('%s: Fetching in thread: %s', id(state), url)
         try:
             try:
-                data, found_urls = fetch(url)
+                _, data, found_urls = extract(url)
             except Exception:
                 data, found_urls = None, []
 
@@ -119,10 +119,7 @@ class Coordinator(Thread):
                      id(count_result.state), count_result.url)
         state = count_result.state
         state.pending_counts -= 1
-
-        for word, count in count_result.counts.items():
-            state.totals[word] = state.totals.get(word, 0) + count
-
+        state.results.append((count_result.url, count_result.counts))
         self.maybe_notify(state)
 
     def maybe_notify(self, state):
@@ -184,7 +181,9 @@ class MyHandler(BaseHTTPRequestHandler):
         with state.output:
             state.output.wait()
         self.wfile.write(b'<pre>')
-        self.wfile.write(escape(get_top_words(state.totals)).encode('utf-8'))
+        top_words = get_global_words(state.results)
+        message = get_top_words_message(top_words)
+        self.wfile.write(escape(message).encode('utf-8'))
         self.wfile.write(b'</pre>')
 
 
@@ -197,7 +196,7 @@ class MyServer(HTTPServer, ThreadingMixIn):
 
 def main():
     port = int(argv[1])
-    MyHandler.request_queue = start(1, 6)
+    MyHandler.request_queue = start(1, 1)
     server = MyServer(port)
     server.serve_forever()
 
