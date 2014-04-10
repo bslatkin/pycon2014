@@ -29,7 +29,7 @@ def parallel_wordcount(start_url, max_depth, word_length):
     for _ in range(3):
         Thread(target=func, daemon=True).start()
 
-    result = {}
+    result = []
     func = lambda: counter(count_queue, word_length, result)
     for _ in range(3):
         Thread(target=func, daemon=True).start()
@@ -71,16 +71,16 @@ def counter(count_queue, word_length, result):
             ranked_words = list(counts.items())
             ranked_words.sort(key=lambda x: x[1], reverse=True)
             if not ranked_words:
-                result[url] = ''
+                result.append((url, ''))
             else:
-                result[url] = ranked_words[0]  # GIL :(
+                result.append((url, ranked_words[0]))  # GIL :(
         finally:
             count_queue.task_done()
 
 
 def print_popular_word(result):
     print('Found %d urls' % len(result))
-    for url, popular_word in result.items():
+    for url, popular_word in result:
         print('%s most popular word : %s' % (url, popular_word))
 
 

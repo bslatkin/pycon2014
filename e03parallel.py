@@ -31,8 +31,8 @@ def consumer(fetch_queue, max_depth, seen_urls, result):
     while True:
         depth, url = fetch_queue.get()
         try:
-            if depth > max_depth: continue     # Ignore URLs that are too deep
-            if url in seen_urls: continue      # Prevent infinite loops
+            if depth > max_depth: continue
+            if url in seen_urls: continue      # GIL :|
 
             seen_urls.add(url)                 # GIL :/
             try:
