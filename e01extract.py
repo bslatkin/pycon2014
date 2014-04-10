@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 """
-./e01fetch.py http://camlistore.org
+./e01extract.py http://camlistore.org
 INFO:root:Fetching http://camlistore.org/
 http://camlistore.org/ is 3681 bytes, 11 urls:
 http://camlistore.org/
@@ -35,7 +35,7 @@ def canonicalize(url):
     return urlunparse(parts)
 
 
-def get_url(url):
+def fetch(url):
     logging.info('Fetching %s', url)
     response = urlopen(url, timeout=5)
     assert response.status == 200
@@ -54,19 +54,19 @@ def same_domain(a, b):
     return False
 
 
-def fetch(url):
-    data = get_url(url)
+def extract(url):
+    data = fetch(url)
     found_urls = set()
     for match in URL_EXPR.finditer(data):
         found = canonicalize(match.group('url'))
         if same_domain(url, found):
             found_urls.add(urljoin(url, found))
-    return data, sorted(found_urls)
+    return url, data, sorted(found_urls)
 
 
 def main():
     url = argv[1]
-    data, found_urls = fetch(url)
+    _, data, found_urls = extract(url)
     print('%s is %d bytes, %d urls:\n%s' %
           (url, len(data), len(found_urls), '\n'.join(found_urls)))
 

@@ -11,7 +11,19 @@ Depth  1  http://camlistore.org/community                          2180 bytes
 
 from sys import argv
 
-from e01fetch import canonicalize, fetch
+from e01extract import canonicalize, extract
+
+
+def extract_multi(to_fetch, seen_urls):
+    results = []
+    for url in to_fetch:
+        if url in seen_urls: continue
+        seen_urls.add(url)
+        try:
+            results.append(extract(url))
+        except Exception:
+            continue
+    return results
 
 
 def crawl(start_url, max_depth):
@@ -19,14 +31,9 @@ def crawl(start_url, max_depth):
     to_fetch = [canonicalize(start_url)]
     results = []
     for depth in range(max_depth + 1):
-        batch, to_fetch = to_fetch, []
-        for url in batch:
-            if url in seen_urls: continue
-            seen_urls.add(url)
-            try:
-                data, found_urls = fetch(url)
-            except Exception:
-                continue
+        batch = extract_multi(to_fetch, seen_urls)
+        to_fetch = []
+        for url, data, found_urls in batch:
             results.append((depth, url, data))
             to_fetch.extend(found_urls)
 

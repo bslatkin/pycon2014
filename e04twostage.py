@@ -16,7 +16,7 @@ import re
 from sys import argv
 from threading import Thread
 
-from e01fetch import canonicalize, fetch
+from e01extract import canonicalize, extract
 
 
 def parallel_wordcount(start_url, max_depth, word_length):
@@ -48,7 +48,7 @@ def fetcher(fetch_queue, max_depth, seen_urls, output_queue):
 
             seen_urls.add(url)              # GIL :/
             try:
-                data, found_urls = fetch(url)
+                _, data, found_urls = extract(url)
             except Exception:
                 continue
 

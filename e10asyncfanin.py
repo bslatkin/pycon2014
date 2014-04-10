@@ -14,7 +14,7 @@ import re
 from sys import argv
 
 import asyncio
-from e01fetch import canonicalize
+from e01extract import canonicalize
 from e05threadfanin import print_top_words
 from e06asyncfetch import fetch_async
 

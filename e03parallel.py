@@ -10,7 +10,7 @@ from queue import Queue
 from sys import argv
 from threading import Thread
 
-from e01fetch import canonicalize, fetch
+from e01extract import canonicalize, extract
 from e02crawl import print_crawl
 
 
@@ -36,7 +36,7 @@ def consumer(fetch_queue, max_depth, seen_urls, result):
 
             seen_urls.add(url)                 # GIL :/
             try:
-                data, found_urls = fetch(url)
+                _, data, found_urls = extract(url)
             except Exception:
                 continue
 

@@ -20,7 +20,7 @@ from urllib.parse import urlunparse
 
 import aiohttp
 import asyncio
-from e01fetch import canonicalize, same_domain, URL_EXPR
+from e01extract import canonicalize, same_domain, URL_EXPR
 
 
 @asyncio.coroutine

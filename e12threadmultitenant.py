@@ -17,7 +17,7 @@ from sys import argv
 from threading import Condition, Thread
 from urllib.parse import parse_qsl
 
-from e01fetch import fetch
+from e01extract import fetch
 from e05threadfanin import get_top_words
 from e11asyncmultitenant import MY_FORM
 
