@@ -3,8 +3,7 @@
 """
 ./e09asynctwostage.py http://camlistore.org 1 6
 Found 10 urls
-http://camlistore.org/docs/contributing most popular word : ('camlistore', 13)
-http://camlistore.org/contributors most popular word : ('script', 4)
+http://camlistore.org/ frequencies: [('camlistore', 13), ...]
 ...
 
 

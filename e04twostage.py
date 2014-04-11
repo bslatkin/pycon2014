@@ -3,8 +3,7 @@
 """
 ./e04twostage.py http://camlistore.org 1 6
 Found 10 urls
-http://camlistore.org/ most popular word : ('Camlistore', 9)
-http://camlistore.org/download most popular word : ('release', 10)
+http://camlistore.org/ frequencies: [('camlistore', 13), ...]
 ...
 
 

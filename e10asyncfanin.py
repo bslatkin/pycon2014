@@ -2,8 +2,7 @@
 
 """
 ./e10asyncfanin.py http://camlistore.org 1 6
-#0 word,  107 occurrences: camlistore
-#1 word,   39 occurrences: content
+#1 word,  107 occurrences: camlistore
 ...
 
 

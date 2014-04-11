@@ -2,8 +2,7 @@
 
 """
 ./e05threadfanin.py http://camlistore.org 1 5
-#0 word,  107 occurrences: camlistore
-#1 word,   45 occurrences: class
+#1 word,  107 occurrences: camlistore
 ...
 
 
